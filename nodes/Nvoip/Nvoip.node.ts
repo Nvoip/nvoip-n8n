@@ -19,7 +19,7 @@ export class Nvoip implements INodeType {
 		],
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
-		usableAsTool: true,
+		// usableAsTool: true,
 		properties: [
 			{
 				displayName: 'Resource',

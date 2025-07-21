@@ -6,87 +6,68 @@ import {
 export class NvoipOAuth2Api implements ICredentialType {
 	name = 'nvoipOAuth2Api';
 	displayName = 'Nvoip OAuth2 API';
-	documentationUrl = 'https://docs.nvoip.com.br/auth';
+	documentationUrl = 'https://nvoip.com/api-reference';
+	extends = ['oAuth2Api'];
+
+	oauth = {
+		authorizeUrl: 'https://api.nvoip.com.br/auth/oauth2/authorize',
+		accessTokenUrl: 'https://api.nvoip.com.br/auth/oauth2/token',
+		authentication: 'body' as const,
+	};
+
+
 	properties: INodeProperties[] = [
 		{
 			displayName: 'Client ID',
 			name: 'clientId',
-			type: 'string',
-			default: '',
+			type: 'hidden',
+			default: 'N8N-Test',
+			required: true,
 		},
 		{
 			displayName: 'Client Secret',
 			name: 'clientSecret',
-			type: 'string',
-			typeOptions: { password: true },
-			default: '',
-		},
-		{
-			displayName: 'Auth URL',
-			name: 'authUrl',
-			type: 'string',
-			default: 'https://api.nvoip.com.br/auth/oauth2/authorize',
-		},
-		{
-			displayName: 'Token URL',
-			name: 'accessTokenUrl',
-			type: 'string',
-			default: 'https://api.nvoip.com.br/auth/oauth2/token',
+			type: 'hidden',
+			default: '923683fc-02d4-4c24-b5a8-a34c642a0cf6',
+			required: true,
+			typeOptions: {
+				password: true,
+			},
 		},
 		{
 			displayName: 'Scope',
 			name: 'scope',
-			type: 'string',
+			type: 'hidden',
 			default: 'call:make call:query sms:send whatsapp:send whatsapp:templates openid',
 		},
 		{
-			displayName: 'Redirect URI',
-			name: 'redirectUri',
+			displayName: 'Authorization URL',
+			name: 'authUrl',
 			type: 'hidden',
-			default: '',
+			default: 'https://api.nvoip.com.br/auth/oauth2/authorize',
 		},
 		{
-			displayName: 'Authentication',
-			name: 'authentication',
+			displayName: 'Access Token URL',
+			name: 'accessTokenUrl',
 			type: 'hidden',
-			default: 'oAuth2',
+			default: 'https://api.nvoip.com.br/auth/oauth2/token',
 		},
 		{
-			displayName: 'Grant Type',
-			name: 'grantType',
+			displayName: 'Refresh Token URL',
+			name: 'refreshTokenUrl',
 			type: 'hidden',
-			default: 'authorizationCode',
-		},
-		{
-			displayName: 'Operation',
-			name: 'operation',
-			type: 'options',
-			noDataExpression: true,
-			options: [
-				{
-					name: 'Make a Call',
-					value: 'makeCall',
-					description: 'Realizar uma chamada telefônica',
-					action: 'Make a call',
-					displayOptions: { show: { resource: ['call'] } },
-				},
-				{
-					name: 'Send SMS',
-					value: 'sendSms',
-					description: 'Enviar um SMS',
-					action: 'Send SMS',
-					displayOptions: { show: { resource: ['sms'] } },
-				},
-				{
-					name: 'Send WhatsApp',
-					value: 'sendWhatsapp',
-					description: 'Enviar mensagem via WhatsApp',
-					action: 'Send WhatsApp',
-					displayOptions: { show: { resource: ['whatsapp'] } },
-				},
-			],
-			default: 'makeCall',
-			description: 'Selecione a operação',
+			default: 'https://api.nvoip.com.br/auth/oauth2/token',
 		},
 	];
+
+	test = {
+		request: {
+			method: 'GET' as const,
+			url: 'https://api.nvoip.com.br/v2/list/users',
+		},
+	};
+
+
 }
+
+
