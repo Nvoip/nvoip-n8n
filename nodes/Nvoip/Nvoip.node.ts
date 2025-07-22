@@ -1,13 +1,23 @@
-import { INodeType, INodeTypeDescription, NodeConnectionType, IExecuteFunctions } from 'n8n-workflow';
+import {
+	INodeType,
+	INodeTypeDescription,
+	NodeConnectionType,
+	IExecuteFunctions,
+	IDataObject,
+	INodeExecutionData,
+} from 'n8n-workflow';
 
 export class Nvoip implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Nvoip',
 		name: 'nvoip',
-		icon: { light: 'file:LogoIconCor.png', dark: 'file:LogoIconCor.png' },
+		icon: {
+			light: 'file:Logo_nvoip_250x60.svg',
+			dark: 'file:Logo_nvoip_250x60.svg',
+		},
 		group: ['transform'],
 		version: 1,
-		description: 'Node de teste para integração local',
+		description: 'Node para envio de SMS via Nvoip',
 		defaults: {
 			name: 'Nvoip',
 		},
@@ -19,20 +29,14 @@ export class Nvoip implements INodeType {
 		],
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
-		// usableAsTool: true,
 		properties: [
 			{
 				displayName: 'Resource',
 				name: 'resource',
 				type: 'options',
 				noDataExpression: true,
-				options: [
-					{ name: 'Call', value: 'call', description: 'Ações de chamada' },
-					{ name: 'SMS', value: 'sms', description: 'Ações de SMS' },
-					{ name: 'WhatsApp', value: 'whatsapp', description: 'Ações de WhatsApp' },
-				],
-				default: 'call',
-				description: 'Escolha o tipo de recurso',
+				options: [{ name: 'SMS', value: 'sms', description: 'Ações de SMS' }],
+				default: 'sms',
 			},
 			{
 				displayName: 'Operation',
@@ -41,43 +45,34 @@ export class Nvoip implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Make a Call',
-						value: 'makeCall',
-						description: 'Realizar uma chamada telefônica',
-						action: 'Make a call',
-						displayOptions: { show: { resource: ['call'] } },
-					},
-					{
 						name: 'Send SMS',
 						value: 'sendSms',
 						description: 'Enviar um SMS',
 						action: 'Send SMS',
 						displayOptions: { show: { resource: ['sms'] } },
 					},
-					{
-						name: 'Send WhatsApp',
-						value: 'sendWhatsapp',
-						description: 'Enviar mensagem via WhatsApp',
-						// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased
-						action: 'Send WhatsApp',
-						displayOptions: { show: { resource: ['whatsapp'] } },
-					},
 				],
-				default: 'makeCall',
-				description: 'Selecione a operação',
+				default: 'sendSms',
 			},
 			{
 				displayName: 'Número De Destino',
 				name: 'to',
 				type: 'string',
 				displayOptions: {
-					show: {
-						resource: ['call', 'sms', 'whatsapp'],
-					},
+					show: { resource: ['sms'], operation: ['sendSms'] },
 				},
 				default: '',
-				description: 'Número de telefone de destino (com DDI, ex: +5511999999999)',
+				description: 'Número de telefone com DDI (ex: 5511999999999)',
 				required: true,
+			},
+			{
+				displayName: 'Usar Template De Mensagem?',
+				name: 'useTemplate',
+				type: 'boolean',
+				displayOptions: {
+					show: { resource: ['sms'], operation: ['sendSms'] },
+				},
+				default: false,
 			},
 			{
 				displayName: 'Mensagem',
@@ -85,55 +80,71 @@ export class Nvoip implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						resource: ['sms', 'whatsapp'],
+						resource: ['sms'],
+						operation: ['sendSms'],
+						useTemplate: [false],
 					},
 				},
 				default: '',
-				description: 'Mensagem a ser enviada',
+				description: 'Mensagem personalizada (máx. 160 caracteres, sem acento).',
 				required: true,
+			},
+			{
+				displayName: 'Template (Não Funcional Ainda)',
+				name: 'templateId',
+				type: 'hidden',
+				displayOptions: {
+					show: {
+						resource: ['sms'],
+						operation: ['sendSms'],
+						useTemplate: [true],
+					},
+				},
+				default: 'tpl_promo',
 			},
 		],
 	};
 
+	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+    const items = this.getInputData();
+    const returnData: INodeExecutionData[] = [];
 
+    const credentials = await this.getCredentials('nvoipOAuth2Api');
+    // @ts-ignore
+    const accessToken = credentials.oauthTokenData.access_token;
 
-	async execute(this: IExecuteFunctions) {
-		const response = await this.helpers.requestOAuth2.call(
-			this,
-			'nvoipOAuth2Api',
-			{
-				method: 'GET',
-				url: 'https://api.nvoip.com.br/v2/list/users',
-				// ...outros parâmetros
-			}
-		);
-		const items = this.getInputData();
-		const returnData = [];
-		for (let i = 0; i < items.length; i++) {
-			const resource = this.getNodeParameter('resource', i) as string;
-			const operation = this.getNodeParameter('operation', i) as string;
-			const to = this.getNodeParameter('to', i) as string;
-			let message = '';
-			if (resource === 'sms' || resource === 'whatsapp') {
-				message = this.getNodeParameter('message', i) as string;
-			}
+    for (let i = 0; i < items.length; i++) {
+        try {
+            const to = this.getNodeParameter('to', i) as string;
+            const message = this.getNodeParameter('message', i) as string;
 
-			let returnItem: { json: any } = { json: {} };
+            const response = await this.helpers.request({
+                method: 'POST',
+                url: 'https://api.nvoip.com.br/v3/sms',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: {
+                    phoneNumber: to,
+                    message,
+                },
+                json: true,
+            });
 
-			if (resource === 'call' && operation === 'makeCall') {
-				// lógica para chamada
-				returnItem = { json: { resource, operation, to } };
-			} else if (resource === 'sms' && operation === 'sendSms') {
-				// lógica para SMS
-				returnItem = { json: { resource, operation, to, message } };
-			} else if (resource === 'whatsapp' && operation === 'sendWhatsapp') {
-				// lógica para WhatsApp
-				returnItem = { json: { resource, operation, to, message } };
-			}
+            returnData.push({ json: response as IDataObject });
+        } catch (error: any) {
 
-			returnData.push(returnItem);
-		}
-		returnData.push({ json: response });
-		return this.prepareOutputData(returnData);
-	}
-}
+					//@ts-ignore
+					console.log(error)
+            returnData.push({
+                json: {
+                    error: error.message,
+                    itemIndex: i,
+                },
+            });
+        }
+    }
+
+    // IMPORTANTE: retornar array de arrays, pois execute espera NodeOutput (INodeExecutionData[][])
+    return [returnData];
+}}
