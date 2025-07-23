@@ -122,10 +122,11 @@ export class Nvoip implements INodeType {
                 method: 'POST',
                 url: 'https://api.nvoip.com.br/v3/sms',
                 headers: {
-                    'Content-Type': 'application/json',
-                },
+									'Content-Type': 'application/json',
+									'Authorization': `Bearer ${accessToken}`,
+							},
                 body: {
-                    phoneNumber: to,
+                    numberPhone: to,
                     message,
                 },
                 json: true,
@@ -145,6 +146,5 @@ export class Nvoip implements INodeType {
         }
     }
 
-    // IMPORTANTE: retornar array de arrays, pois execute espera NodeOutput (INodeExecutionData[][])
     return [returnData];
 }}
