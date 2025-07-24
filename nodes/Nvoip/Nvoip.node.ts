@@ -5,6 +5,7 @@ import {
 	IExecuteFunctions,
 	IDataObject,
 	INodeExecutionData,
+	ILoadOptionsFunctions,
 } from 'n8n-workflow';
 
 export class Nvoip implements INodeType {
@@ -12,8 +13,8 @@ export class Nvoip implements INodeType {
 		displayName: 'Nvoip',
 		name: 'nvoip',
 		icon: {
-			light: 'file:Logo_nvoip_250x60.svg',
-			dark: 'file:Logo_nvoip_250x60.svg',
+			light: 'file:Logo_nvoip.svg',
+			dark: 'file:Logo_nvoip.svg',
 		},
 		group: ['transform'],
 		version: 1,
@@ -90,9 +91,13 @@ export class Nvoip implements INodeType {
 				required: true,
 			},
 			{
-				displayName: 'Template (Não Funcional Ainda)',
+				// eslint-disable-next-line n8n-nodes-base/node-param-display-name-wrong-for-dynamic-options
+				displayName: 'Template',
 				name: 'templateId',
-				type: 'hidden',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getTemplates',
+				},
 				displayOptions: {
 					show: {
 						resource: ['sms'],
@@ -100,51 +105,177 @@ export class Nvoip implements INodeType {
 						useTemplate: [true],
 					},
 				},
-				default: 'tpl_promo',
+				default: '',
+				// eslint-disable-next-line n8n-nodes-base/node-param-description-wrong-for-dynamic-options
+				description: 'Escolha um template de mensagem',
+				required: true,
 			},
+			{
+				// eslint-disable-next-line n8n-nodes-base/node-param-display-name-miscased
+				displayName: 'Variáveis do template',
+				name: 'variables',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
+				displayOptions: {
+					show: {
+						resource: ['sms'],
+						operation: ['sendSms'],
+						useTemplate: [true],
+					},
+				},
+				default: {},
+				options: [
+					{
+						name: 'variable',
+						// eslint-disable-next-line n8n-nodes-base/node-param-display-name-miscased
+						displayName: 'Variável do template',
+						values: [
+							{
+								displayName: 'Valor',
+								name: 'value',
+								type: 'string',
+								default: '',
+								placeholder: 'Valor para {{n}}',
+							},
+						],
+					},
+				],
+				description: 'Adicione as variáveis do template na ordem correta',
+			}
 		],
 	};
 
+	methods = {
+		loadOptions: {
+			async getTemplates(this: ILoadOptionsFunctions) {
+				const credentials = await this.getCredentials('nvoipOAuth2Api');
+				// @ts-ignore
+				const accessToken = credentials.oauthTokenData.access_token;
+
+				const response = await this.helpers.request({
+					method: 'GET',
+					url: 'https://api.nvoip.com.br/v3/sms/lisTemplates',
+					headers: {
+						Authorization: `Bearer ${accessToken}`,
+						'Content-Type': 'application/json',
+					},
+					json: true,
+				});
+
+				//@ts-ignore
+				console.log(response)
+				return (response as any[]).map((tpl: any) => {
+					const matches = tpl.bodyText.match(/{{\d+}}/g) || [];
+					const uniqueVars = Array.from(new Set(matches.map((v: string) => v.replace(/[^\d]/g, ''))));
+					return {
+						name: tpl.templateName,
+						value: tpl.id,
+						description: `Vars: ${uniqueVars.length} - ${tpl.bodyText}`,
+					};
+				});
+			}
+		},
+	};
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-    const items = this.getInputData();
-    const returnData: INodeExecutionData[] = [];
+		const items = this.getInputData();
+		const returnData: INodeExecutionData[] = [];
 
-    const credentials = await this.getCredentials('nvoipOAuth2Api');
-    // @ts-ignore
-    const accessToken = credentials.oauthTokenData.access_token;
+		const credentials = await this.getCredentials('nvoipOAuth2Api');
+		// @ts-ignore
+		const accessToken = credentials.oauthTokenData.access_token;
 
-    for (let i = 0; i < items.length; i++) {
-        try {
-            const to = this.getNodeParameter('to', i) as string;
-            const message = this.getNodeParameter('message', i) as string;
+		for (let i = 0; i < items.length; i++) {
+			try {
+				const to = this.getNodeParameter('to', i) as string;
+				const useTemplate = this.getNodeParameter('useTemplate', i) as boolean;
 
-            const response = await this.helpers.request({
-                method: 'POST',
-                url: 'https://api.nvoip.com.br/v3/sms',
-                headers: {
-									'Content-Type': 'application/json',
-									'Authorization': `Bearer ${accessToken}`,
-							},
-                body: {
-                    numberPhone: to,
-                    message,
-                },
-                json: true,
-            });
+				let response: IDataObject;
 
-            returnData.push({ json: response as IDataObject });
-        } catch (error: any) {
+				if (useTemplate) {
+					const templateId = this.getNodeParameter('templateId', i) as number;
+					const variablesRaw = this.getNodeParameter('variables', i, {}) as { variable?: Array<{ value: string }> };
+					const variablesArray = Array.isArray(variablesRaw?.variable) ? variablesRaw.variable : [];
+					let variables = variablesArray.map((v) => v.value);
 
-					//@ts-ignore
-					console.log(error)
-            returnData.push({
-                json: {
-                    error: error.message,
-                    itemIndex: i,
-                },
-            });
-        }
-    }
+					// Recupera todos os templates (ou salve-os em cache)
+					const credentials = await this.getCredentials('nvoipOAuth2Api');
+					// @ts-ignore
+					const accessToken = credentials.oauthTokenData.access_token;
 
-    return [returnData];
-}}
+					const templates = await this.helpers.request({
+						method: 'GET',
+						url: 'https://api.nvoip.com.br/v3/sms/lisTemplates',
+						headers: {
+							Authorization: `Bearer ${accessToken}`,
+							'Content-Type': 'application/json',
+						},
+						json: true,
+					});
+
+					const selectedTemplate = templates.find((tpl: any) => tpl.id === templateId);
+					const matches = selectedTemplate?.bodyText?.match(/{{\d+}}/g) || [];
+					const maxVarIndex = matches
+						.map((m: string) => parseInt(m.replace(/[^\d]/g, '')))
+						.reduce((max: number, cur: number) => (cur > max ? cur : max), 0);
+
+					// Preenche com strings vazias caso falte variável
+					// while (variables.length < maxVarIndex) {
+					// 	variables.push('');
+					// }
+
+					if (maxVarIndex > 0 && variables.length === 0) {
+						// eslint-disable-next-line n8n-nodes-base/node-execute-block-wrong-error-thrown
+						throw new Error(`O template selecionado exige ${maxVarIndex} variável(is), mas nenhuma foi preenchida. Adicione os valores nas "Variáveis do template".`);
+					}
+
+					response = await this.helpers.request({
+						method: 'POST',
+						url: 'https://api.nvoip.com.br/v3/sms/sendTemplate',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${accessToken}`,
+						},
+						body: {
+							phoneNumber: to,
+							templateId,
+							variables,
+						},
+						json: true,
+					});
+				} else {
+					const message = this.getNodeParameter('message', i) as string;
+
+					response = await this.helpers.request({
+						method: 'POST',
+						url: 'https://api.nvoip.com.br/v3/sms',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${accessToken}`,
+						},
+						body: {
+							numberPhone: to,
+							message,
+						},
+						json: true,
+					});
+				}
+
+				returnData.push({ json: response as IDataObject });
+			} catch (error: any) {
+				// @ts-ignore
+				console.log(error);
+				returnData.push({
+					json: {
+						error: error.message,
+						itemIndex: i,
+					},
+				});
+			}
+		}
+
+		return [returnData];
+	}
+}
