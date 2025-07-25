@@ -39,8 +39,27 @@ export class Nvoip implements INodeType {
 				options: [
 					{ name: 'SMS', value: 'sms', description: 'Ações de SMS' },
 					{ name: 'WhatsApp', value: 'whatsapp', description: 'Ações de WhatsApp' },
+					{ name: 'Call', value: 'call', description: 'Ações de Ligação' }
 				],
 				default: 'sms',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: { resource: ['call'] },
+				},
+				options: [
+					{
+						name: 'Make Call',
+						value: 'makeCall',
+						description: 'Realizar uma chamada telefônica',
+						action: 'Make a phone call',
+					},
+				],
+				default: 'makeCall',
 			},
 			{
 				displayName: 'Operation',
@@ -77,6 +96,42 @@ export class Nvoip implements INodeType {
 					},
 				],
 				default: 'sendWhatsapp',
+			},
+			{
+				displayName: 'Transferir?',
+				name: 'transfer',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: {
+						resource: ['call'],
+						operation: ['makeCall'],
+					},
+				},
+				// eslint-disable-next-line n8n-nodes-base/node-param-description-boolean-without-whether
+				description: 'Se a chamada deve ser uma transferência (true) ou não (false)',
+			},
+			{
+				displayName: 'Número De Origem (Caller_id)',
+				name: 'callerId',
+				type: 'string',
+				displayOptions: {
+					show: { resource: ['call'], operation: ['makeCall'] },
+				},
+				default: '',
+				required: true,
+				description: 'Número que realizará a chamada (deve estar habilitado no painel Nvoip)',
+			},
+			{
+				displayName: 'Número De Destino',
+				name: 'destination',
+				type: 'string',
+				displayOptions: {
+					show: { resource: ['call'], operation: ['makeCall'] },
+				},
+				default: '',
+				required: true,
+				description: 'Número que receberá a chamada (ex: 5511999999999)',
 			},
 			{
 				displayName: 'Número De Destino',
@@ -143,6 +198,20 @@ export class Nvoip implements INodeType {
 				default: '',
 				description: 'Número de telefone com DDI (ex: 5511999999999)',
 				required: true,
+			},
+			{
+				displayName: 'Imagem (URL)',
+				name: 'imageUrl',
+				type: 'string',
+				default: '',
+				placeholder: 'https://exemplo.com/imagem.jpg',
+				displayOptions: {
+					show: {
+						resource: ['whatsapp'],
+						operation: ['sendWhatsapp'],
+					},
+				},
+				description: 'URL pública da imagem para enviar junto ao template',
 			},
 			{
 				// eslint-disable-next-line n8n-nodes-base/node-param-display-name-wrong-for-dynamic-options
@@ -277,25 +346,28 @@ export class Nvoip implements INodeType {
 					json: true,
 				});
 
-				// O retorno é um array de instâncias, cada uma com um array data de templates
-				//@ts-ignore
-				// console.log(response)
 				const templates: any[] = [];
 				for (const inst of response as any[]) {
 					if (Array.isArray(inst.data)) {
 						for (const tpl of inst.data) {
+							const headerComponent = tpl.components?.find((c: any) => c.type === 'HEADER');
+							const headerFormat = headerComponent?.format || null;
+							const headerText = headerComponent?.text || null;
+
 							templates.push({
 								name: tpl.name,
 								value: JSON.stringify({
 									id: tpl.id,
 									instance: inst.instance,
 									language: tpl.language,
+									components: tpl.components,
+									header: headerText,
+									headerFormat,
 								}),
-								description:
-									tpl.components
-										?.map((c: any) => c.text)
-										.filter(Boolean)
-										.join(' | ') || '',
+								description: [
+									headerFormat ? `HEADER (${headerFormat})` : null,
+									...(tpl.components?.map((c: any) => c.text).filter(Boolean) || []),
+								].join(' | '),
 							});
 						}
 					}
@@ -317,8 +389,9 @@ export class Nvoip implements INodeType {
 			try {
 				const resource = this.getNodeParameter('resource', i);
 				const operation = this.getNodeParameter('operation', i);
-				let response: IDataObject;
+				let response;
 
+				// ===== SMS ==========
 				if (resource === 'sms' && operation === 'sendSms') {
 					const to = this.getNodeParameter('to', i) as string;
 					const useTemplate = this.getNodeParameter('useTemplate', i) as boolean;
@@ -328,33 +401,8 @@ export class Nvoip implements INodeType {
 						const variablesRaw = this.getNodeParameter('variables', i, {}) as {
 							variable?: Array<{ value: string }>;
 						};
-						const variablesArray = Array.isArray(variablesRaw?.variable)
-							? variablesRaw.variable
-							: [];
+						const variablesArray = Array.isArray(variablesRaw?.variable) ? variablesRaw.variable : [];
 						const variables = variablesArray.map((v) => v.value);
-
-						const templates = await this.helpers.request({
-							method: 'GET',
-							url: 'https://api.nvoip.com.br/v3/sms/lisTemplates',
-							headers: {
-								Authorization: `Bearer ${accessToken}`,
-								'Content-Type': 'application/json',
-							},
-							json: true,
-						});
-
-						const selectedTemplate = templates.find((tpl: any) => tpl.id === templateId);
-						const matches = selectedTemplate?.bodyText?.match(/{{\d+}}/g) || [];
-						const maxVarIndex = matches
-							.map((m: string) => parseInt(m.replace(/[^\d]/g, '')))
-							.reduce((max: number, cur: number) => (cur > max ? cur : max), 0);
-
-						if (maxVarIndex > 0 && variables.length === 0) {
-							// eslint-disable-next-line n8n-nodes-base/node-execute-block-wrong-error-thrown
-							throw new Error(
-								`O template selecionado exige ${maxVarIndex} variável(is), mas nenhuma foi preenchida.`,
-							);
-						}
 
 						response = await this.helpers.request({
 							method: 'POST',
@@ -387,24 +435,21 @@ export class Nvoip implements INodeType {
 							json: true,
 						});
 					}
+
+				// ===== WhatsApp ==========
 				} else if (resource === 'whatsapp' && operation === 'sendWhatsapp') {
 					const to = this.getNodeParameter('toWhatsapp', i) as string;
-					const templateOption = JSON.parse(
-						this.getNodeParameter('templateIdWhatsapp', i) as string,
-					);
+					const templateOption = JSON.parse(this.getNodeParameter('templateIdWhatsapp', i) as string);
 					const templateId = templateOption.id;
 					const instance = templateOption.instance;
 					const language = templateOption.language;
+					const imageUrl = this.getNodeParameter('imageUrl', i, '') as string;
+
 					const variablesRaw = this.getNodeParameter('variablesWhatsapp', i, {}) as {
 						variable?: Array<{ value: string }>;
 					};
 					const variablesArray = Array.isArray(variablesRaw?.variable) ? variablesRaw.variable : [];
 					const allValues = variablesArray.map((v) => v.value);
-
-					if (!instance || !language) {
-						// eslint-disable-next-line n8n-nodes-base/node-execute-block-wrong-error-thrown
-						throw new Error('Não foi possível encontrar o template selecionado na listagem.');
-					}
 
 					const requestBody: IDataObject = {
 						idTemplate: templateId,
@@ -413,8 +458,11 @@ export class Nvoip implements INodeType {
 						language,
 						bodyVariables: allValues,
 					};
-					//@ts-ignore
-					console.log(requestBody);
+
+					if (imageUrl) {
+						requestBody.url = imageUrl;
+					}
+
 					response = await this.helpers.request({
 						method: 'POST',
 						url: 'https://api.nvoip.com.br/v3/wa/sendTemplates',
@@ -425,12 +473,37 @@ export class Nvoip implements INodeType {
 						body: requestBody,
 						json: true,
 					});
+
+				// ===== Ligação ==========
+				} else if (resource === 'call' && operation === 'makeCall') {
+					const caller = this.getNodeParameter('callerId', i) as string;
+					const called = this.getNodeParameter('destination', i) as string;
+					const transfer = this.getNodeParameter('transfer', i) as boolean;
+
+					const requestBody: IDataObject = {
+						caller,
+						called,
+						transfer,
+					};
+
+					//@ts-ignore
+					console.log(requestBody)
+					response = await this.helpers.request({
+						method: 'POST',
+						url: 'https://api.nvoip.com.br/v3/calls/',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${accessToken}`,
+						},
+						body: requestBody,
+						json: true,
+					});
 				} else {
 					// eslint-disable-next-line n8n-nodes-base/node-execute-block-wrong-error-thrown
-					throw new Error('Operação ou recurso não suportado.');
+					throw new Error(`Operação não suportada: ${resource}/${operation}`);
 				}
 
-				returnData.push({ json: response as IDataObject });
+				returnData.push({ json: response });
 			} catch (error: any) {
 				returnData.push({
 					json: {
@@ -443,4 +516,5 @@ export class Nvoip implements INodeType {
 
 		return [returnData];
 	}
+
 }

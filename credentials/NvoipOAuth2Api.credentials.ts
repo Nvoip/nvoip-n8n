@@ -70,12 +70,12 @@ export class NvoipOAuth2Api implements ICredentialType {
 			type: 'hidden',
 			default: '',
 		},
-		// {
-		// 	displayName: 'Authentication',
-		// 	name: 'authentication',
-		// 	type: 'hidden',
-		// 	default: 'header',
-		// },
+		{
+			displayName: 'Authentication',
+			name: 'authentication',
+			type: 'hidden',
+			default: 'header',
+		},
 	];
 
   test = {
