@@ -1,5 +1,5 @@
 {
-  "name": "n8n-nodes-lucas-naves",
+  "name": "@nvoip/n8n-nodes-nvoip",
   "version": "0.1.0",
   "description": "Criação de nodes para o n8n",
   "keywords": [
@@ -9,7 +9,7 @@
   "homepage": "",
   "author": {
     "name": "Lucas Naves",
-    "email": "lucas.naves@gmail.com"
+    "email": "lucasnaves87@gmail.com"
   },
   "repository": {
     "type": "git",
