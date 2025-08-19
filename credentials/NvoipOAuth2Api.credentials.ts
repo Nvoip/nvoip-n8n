@@ -77,11 +77,4 @@ export class NvoipOAuth2Api implements ICredentialType {
 			default: 'header',
 		},
 	];
-
-  test = {
-    request: {
-      method: 'GET' as const,
-      url: 'https://api.nvoip.com.br/v2/list/users',
-    },
-  };
 }

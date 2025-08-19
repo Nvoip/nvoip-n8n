@@ -1,6 +1,6 @@
 {
   "name": "@nvoip/n8n-nodes-nvoip",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Criação de nodes para o n8n",
   "keywords": [
     "n8n-community-node-package"
