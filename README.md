@@ -1,48 +1,69 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+# 📡 @nvoip/n8n-nodes-nvoip
 
-# n8n-nodes-starter
+Integração da **Nvoip** com o **[n8n](https://n8n.io/)** para automação de comunicações:  
+✅ Envio de SMS  
+✅ Mensagens via WhatsApp  
+✅ Ligações telefônicas  
+✅ Torpedos de voz (simples e interativos)  
 
-This repo contains example nodes to help you get started building your own custom integrations for [n8n](https://n8n.io). It includes the node linter and other dependencies.
+---
 
-To make your custom node available to the community, you must create it as an npm package, and [submit it to the npm registry](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry).
+## 🚀 Introdução
+Este pacote fornece um **node personalizado para o n8n**, permitindo integrar de forma simples e rápida os serviços da **Nvoip** em fluxos de automação.  
+O projeto foi desenvolvido em **TypeScript**, com suporte a **OAuth2** para autenticação segura e diversas funcionalidades de comunicação.
 
-If you would like your node to be available on n8n cloud you can also [submit your node for verification](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/).
+---
 
-## Prerequisites
+## 🛠️ Requisitos
 
-You need the following installed on your development machine:
+- [Node.js](https://nodejs.org/) **20+** (recomendado instalar via [NVM](https://github.com/nvm-sh/nvm))  
+- **npm**  
+- **Git**  
+- [n8n](https://docs.n8n.io/getting-started/installation/) instalado globalmente:
 
-* [git](https://git-scm.com/downloads)
-* Node.js and npm. Minimum version Node 20. You can find instructions on how to install both using nvm (Node Version Manager) for Linux, Mac, and WSL [here](https://github.com/nvm-sh/nvm). For Windows users, refer to Microsoft's guide to [Install NodeJS on Windows](https://docs.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows).
-* Install n8n with:
-  ```
-  npm install n8n -g
-  ```
-* Recommended: follow n8n's guide to [set up your development environment](https://docs.n8n.io/integrations/creating-nodes/build/node-development-environment/).
+```bash
+npm install -g n8n
 
-## Using this starter
+## ⚙️ Instalação e Setup
 
-These are the basic steps for working with the starter. For detailed guidance on creating and publishing nodes, refer to the [documentation](https://docs.n8n.io/integrations/creating-nodes/).
+Clone o repositório base e instale as dependências:
 
-1. [Generate a new repository](https://github.com/n8n-io/n8n-nodes-starter/generate) from this template repository.
-2. Clone your new repo:
-   ```
-   git clone https://github.com/<your organization>/<your-repo-name>.git
-   ```
-3. Run `npm i` to install dependencies.
-4. Open the project in your editor.
-5. Browse the examples in `/nodes` and `/credentials`. Modify the examples, or replace them with your own nodes.
-6. Update the `package.json` to match your details.
-7. Run `npm run lint` to check for errors or `npm run lintfix` to automatically fix errors when possible.
-8. Test your node locally. Refer to [Run your node locally](https://docs.n8n.io/integrations/creating-nodes/test/run-node-locally/) for guidance.
-9. Replace this README with documentation for your node. Use the [README_TEMPLATE](README_TEMPLATE.md) to get started.
-10. Update the LICENSE file to use your details.
-11. [Publish](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry) your package to npm.
+```bash
+git clone https://github.com/nvoip/n8n-nodes-nvoip.git
+cd n8n-nodes-nvoip
+npm install
 
-## More information
+Inicie o n8n em modo de desenvolvimento:
 
-Refer to our [documentation on creating nodes](https://docs.n8n.io/integrations/creating-nodes/) for detailed information on building your own nodes.
+n8n start
 
-## License
 
-[MIT](https://github.com/n8n-io/n8n-nodes-starter/blob/master/LICENSE.md)
+🔑 Autenticação (OAuth2)
+A integração utiliza OAuth2.
+Durante o desenvolvimento foi necessário atualizar endpoints desatualizados para garantir compatibilidade com a versão mais recente da API da Nvoip.
+
+Após configurar as credenciais no editor do n8n, o acesso é feito de forma segura e transparente.
+
+📲 Funcionalidades
+SMS
+Envio de mensagens customizadas
+
+Suporte a variáveis e templates de SMS
+
+WhatsApp
+Envio de mensagens via API oficial
+
+Suporte a templates predefinidos
+
+Ligações Telefônicas
+Disparo de chamadas via ramal
+
+Conexão entre usuário e cliente final
+
+Implementação inicial do recurso transferTrue (em desenvolvimento)
+
+Torpedo de Voz
+Simples: texto convertido em áudio
+
+Interativo: envio de link para áudio público
+
