@@ -45,8 +45,6 @@ Inicie o n8n em modo de desenvolvimento:
 
 Após configurar as credenciais no editor do n8n, o acesso é feito de forma segura e transparente.
 
-## 📲 Funcionalidades
-
 ## SMS
 
 -	Envio de mensagens customizadas
