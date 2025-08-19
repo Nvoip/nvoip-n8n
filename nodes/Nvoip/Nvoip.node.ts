@@ -376,7 +376,6 @@ export class Nvoip implements INodeType {
 				});
 
 				// @ts-ignore
-				console.log(response);
 				return (response as any[]).map((tpl: any) => {
 					const matches = tpl.bodyText.match(/{{\d+}}/g) || [];
 					const uniqueVars = Array.from(
@@ -409,25 +408,11 @@ export class Nvoip implements INodeType {
 				for (const inst of response as any[]) {
 					if (Array.isArray(inst.data)) {
 						for (const tpl of inst.data) {
-							const headerComponent = tpl.components?.find((c: any) => c.type === 'HEADER');
-							const headerFormat = headerComponent?.format || null;
-							const headerText = headerComponent?.text || null;
-
 							templates.push({
 								name: tpl.name,
-								value: JSON.stringify({
-									id: tpl.id,
-									instance: inst.instance,
-									language: tpl.language,
-									components: tpl.components,
-									header: headerText,
-									headerFormat,
-								}),
-								description: [
-									headerFormat ? `HEADER (${headerFormat})` : null,
-									...(tpl.components?.map((c: any) => c.text).filter(Boolean) || []),
-								].join(' | '),
-							});
+								value: tpl.id,
+								description: tpl.components?.map((c: any) => c.text).join(' | '),
+						});
 						}
 					}
 				}
@@ -481,7 +466,7 @@ export class Nvoip implements INodeType {
 					if (!variables || variables.length === 0) {
 						// eslint-disable-next-line n8n-nodes-base/node-execute-block-wrong-error-thrown
 						throw new Error(
-							`Você está tentando enviar um SMS com template (ID ${templateId}), mas nenhuma variável foi fornecida. Verifique se o template exige variáveis e preencha os valores corretamente.`,
+							`You are trying to send an SMS with template (ID ${templateId}), but no variable was provided. Check if the template requires variables and fill in the values correctly.`,
 						);
 					}
 
@@ -503,13 +488,36 @@ export class Nvoip implements INodeType {
 					// ===== WhatsApp =====
 				} else if (resource === 'whatsapp' && operation === 'sendWhatsapp') {
 					const to = this.getNodeParameter('toWhatsapp', i) as string;
-					const templateOption = JSON.parse(
-						this.getNodeParameter('templateIdWhatsapp', i) as string,
-					);
-					const templateId = templateOption.id;
-					const instance = templateOption.instance;
-					const language = templateOption.language;
+					const templateId = this.getNodeParameter('templateIdWhatsapp', i) as string;
 					const imageUrl = this.getNodeParameter('imageUrl', i, '') as string;
+
+					// Busca os detalhes do template pelo ID
+					const templateResponse = await this.helpers.request({
+						method: 'GET',
+						url: `https://api.nvoip.com.br/v3/wa/listTemplates`,
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${accessToken}`,
+						},
+						json: true,
+					});
+
+					// Encontra o template selecionado
+					let selectedTemplate: any = null;
+					for (const inst of templateResponse as any[]) {
+						if (Array.isArray(inst.data)) {
+							const found = inst.data.find((tpl: any) => tpl.id === templateId);
+							if (found) {
+								selectedTemplate = { ...found, instance: inst.instance };
+								break;
+							}
+						}
+					}
+
+					if (!selectedTemplate) {
+						// eslint-disable-next-line n8n-nodes-base/node-execute-block-wrong-error-thrown
+						throw new Error(`Template with ID ${templateId} not found.`);
+					}
 
 					const variablesRaw = this.getNodeParameter('variablesWhatsapp', i, {}) as {
 						variable?: Array<{ value: string }>;
@@ -519,15 +527,15 @@ export class Nvoip implements INodeType {
 					if (!allValues || allValues.length === 0) {
 						// eslint-disable-next-line n8n-nodes-base/node-execute-block-wrong-error-thrown
 						throw new Error(
-							`Você está tentando enviar template (ID ${templateId}), mas nenhuma variável foi fornecida. Verifique se o template exige variáveis e preencha os valores corretamente.`,
+							`You are trying to send the template (ID ${templateId}), but no variables were provided. Check if the template requires variables and fill in the values.`,
 						);
 					}
 
 					const requestBody: IDataObject = {
 						idTemplate: templateId,
 						destination: to,
-						instance,
-						language,
+						instance: selectedTemplate.instance,
+						language: selectedTemplate.language,
 						bodyVariables: allValues,
 					};
 
@@ -545,8 +553,6 @@ export class Nvoip implements INodeType {
 						body: requestBody,
 						json: true,
 					});
-
-					// ===== Ligação simples =====
 				} else if (resource === 'call' && operation === 'makeCall') {
 					const caller = this.getNodeParameter('callerId', i) as string;
 					const called = this.getNodeParameter('destination', i) as string;
