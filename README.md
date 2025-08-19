@@ -26,27 +26,26 @@ O projeto foi desenvolvido em **TypeScript**, com suporte a **OAuth2** para aute
 - [n8n](https://docs.n8n.io/getting-started/installation/) instalado globalmente:
 - npm install -g n8n
 
-⚙️ Instalação e Setup
+## ⚙️ Instalação e Setup
 
 Clone o repositório e instale as dependências:
 
-git clone https://github.com/nvoip/n8n-nodes-nvoip.git
-cd n8n-nodes-nvoip
-npm install
+- git clone https://github.com/nvoip/n8n-nodes-nvoip.git
+
+- cd n8n-nodes-nvoip
+
+- npm install
 
 
 Inicie o n8n em modo de desenvolvimento:
 
-n8n start
+- n8n start
 
-🔑 Autenticação (OAuth2)
-
-A integração utiliza OAuth2.
-Durante o desenvolvimento foi necessário atualizar endpoints desatualizados para garantir compatibilidade com a versão mais recente da API da Nvoip.
+🔑 A integração utiliza OAuth2.
 
 Após configurar as credenciais no editor do n8n, o acesso é feito de forma segura e transparente.
 
-📲 Funcionalidades
+## 📲 Funcionalidades
 
 ## SMS
 
