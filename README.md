@@ -18,32 +18,35 @@ O projeto foi desenvolvido em **TypeScript**, com suporte a **OAuth2** para aute
 
 ---
 
-## 🛠️ Requisitos
+## ⚙️ Como usar o node
 
-- [Node.js](https://nodejs.org/) **20+** (recomendado instalar via [NVM](https://github.com/nvm-sh/nvm))  
-- **npm**  
-- **Git**  
-- [n8n](https://docs.n8n.io/getting-started/installation/) instalado globalmente:
-- npm install -g n8n
+Siga este passo a passo para configurar e usar o node @nvoip/n8n-nodes-nvoip:
 
-## ⚙️ Instalação e Setup
+1. **Instale o node da comunidade**  
+   - Abra o n8n e vá até a aba de **Nodes da Comunidade**.  
+   - Procure por `@nvoip/n8n-nodes-nvoip` e instale.
 
-Clone o repositório e instale as dependências:
+2. **Adicione o node no seu fluxo**  
+   - Arraste o node para o seu canvas de automação.  
+   - Clique nele para abrir as configurações.
 
-- git clone https://github.com/nvoip/n8n-nodes-nvoip.git
+3. **Configure suas credenciais**  
+   - Na aba de **Login/Autenticação**, insira suas credenciais da Nvoip.  
+   - O node utiliza **OAuth2**, garantindo acesso seguro à API da Nvoip.
 
-- cd n8n-nodes-nvoip
+4. **Configure a ação desejada**  
+   - **SMS**: Defina o número do destinatário e a mensagem (suporte a variáveis e templates).  
+   - **WhatsApp**: Configure o envio de mensagens via API oficial, com suporte a templates predefinidos.  
+   - **Ligações telefônicas**: Escolha o ramal de origem, número de destino e configure transferências se necessário.  
+   - **Torpedo de voz**: Selecione **Simples** (texto convertido em áudio) ou **Interativo** (envio de link para áudio público).
 
-- npm install
+5. **Teste o fluxo**  
+   - Execute o node no modo de teste.  
+   - Verifique logs e mensagens enviadas para garantir que a integração está funcionando corretamente.
 
+6. **Salve e publique seu fluxo**  
+   - Quando tudo estiver configurado, salve o fluxo e publique para produção.
 
-Inicie o n8n em modo de desenvolvimento:
-
-- n8n start
-
-🔑 A integração utiliza OAuth2.
-
-Após configurar as credenciais no editor do n8n, o acesso é feito de forma segura e transparente.
 
 ## SMS
 
@@ -76,10 +79,3 @@ Após configurar as credenciais no editor do n8n, o acesso é feito de forma seg
 O @nvoip/n8n-nodes-nvoip amplia o poder de automação no n8n, permitindo gerenciar toda a comunicação multicanal da Nvoip em um único node.
 A arquitetura modular garante extensibilidade e manutenção simples, abrindo espaço para futuras evoluções.
 
-👤 Autor
-
-Lucas Campos Naves
-
-GitHub: [lucasnavex](https://github.com/lucasnavex)
-
-E-mail: lucasnaves87@gmail.com
