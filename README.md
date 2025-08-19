@@ -74,7 +74,7 @@ Após configurar as credenciais no editor do n8n, o acesso é feito de forma seg
 	
 -	Interativo: envio de link para áudio público
 
-📌 Conclusão
+## 📌 Conclusão
 
 O @nvoip/n8n-nodes-nvoip amplia o poder de automação no n8n, permitindo gerenciar toda a comunicação multicanal da Nvoip em um único node.
 A arquitetura modular garante extensibilidade e manutenção simples, abrindo espaço para futuras evoluções.
