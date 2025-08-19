@@ -47,19 +47,20 @@ Durante o desenvolvimento foi necessário atualizar endpoints desatualizados par
 Após configurar as credenciais no editor do n8n, o acesso é feito de forma segura e transparente.
 
 📲 Funcionalidades
-SMS
+
+## SMS
 
 -	Envio de mensagens customizadas
 	
 -	Suporte a variáveis e templates de SMS
 
-WhatsApp
+## WhatsApp
 
 -	Envio de mensagens via API oficial
 	
 -	Suporte a templates predefinidos
 
-Ligações Telefônicas
+## Ligações Telefônicas
 
 -	Disparo de chamadas via ramal
 	
