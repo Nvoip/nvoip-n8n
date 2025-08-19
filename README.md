@@ -82,5 +82,7 @@ A arquitetura modular garante extensibilidade e manutenção simples, abrindo es
 👤 Autor
 
 Lucas Campos Naves
+
 GitHub: [lucasnavex](https://github.com/lucasnavex)
+
 E-mail: lucasnaves87@gmail.com
