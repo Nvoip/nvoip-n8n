@@ -49,29 +49,29 @@ Após configurar as credenciais no editor do n8n, o acesso é feito de forma seg
 📲 Funcionalidades
 SMS
 
-Envio de mensagens customizadas
-
-Suporte a variáveis e templates de SMS
+-	Envio de mensagens customizadas
+	
+-	Suporte a variáveis e templates de SMS
 
 WhatsApp
 
-Envio de mensagens via API oficial
-
-Suporte a templates predefinidos
+-	Envio de mensagens via API oficial
+	
+-	Suporte a templates predefinidos
 
 Ligações Telefônicas
 
-Disparo de chamadas via ramal
-
-Conexão entre usuário e cliente final
-
-Implementação inicial do recurso transferTrue (em desenvolvimento)
-
-Torpedo de Voz
-
-Simples: texto convertido em áudio
-
-Interativo: envio de link para áudio público
+-	Disparo de chamadas via ramal
+	
+-	Conexão entre usuário e cliente final
+	
+-	Implementação inicial do recurso transferTrue (em desenvolvimento)
+	
+-	Torpedo de Voz
+	
+-	Simples: texto convertido em áudio
+	
+-	Interativo: envio de link para áudio público
 
 📌 Conclusão
 
@@ -81,3 +81,5 @@ A arquitetura modular garante extensibilidade e manutenção simples, abrindo es
 👤 Autor
 
 Lucas Campos Naves
+GitHub: [lucasnavex](https://github.com/lucasnavex)
+E-mail: lucasnaves87@gmail.com
