@@ -20,15 +20,15 @@ export class NvoipOAuth2Api implements ICredentialType {
 		{
 			displayName: 'Client ID',
 			name: 'clientId',
-			type: 'hidden',
-			default: 'N8N-Test',
+			type: 'string',
+			default: '',
 			required: true,
 		},
 		{
 			displayName: 'Client Secret',
 			name: 'clientSecret',
-			type: 'hidden',
-			default: '923683fc-02d4-4c24-b5a8-a34c642a0cf6',
+			type: 'string',
+			default: '',
 			required: true,
 			typeOptions: {
 				password: true,
