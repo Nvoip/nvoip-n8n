@@ -8,14 +8,8 @@ import {
   INodeTypeDescription,
   NodeConnectionType,
   ILoadOptionsFunctions,
-	JsonObject,
+  JsonObject,
 } from 'n8n-workflow';
-
-type OAuth2Creds = {
-  oauthTokenData?: {
-    access_token?: string;
-  };
-};
 
 export class Nvoip implements INodeType {
   description: INodeTypeDescription = {
@@ -221,7 +215,8 @@ export class Nvoip implements INodeType {
           },
         },
         default: '',
-        description: 'Choose from the list, or specify an ID using an expression. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+        description:
+          'Choose from the list, or specify an ID using an expression. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
         required: true,
       },
       {
@@ -263,7 +258,8 @@ export class Nvoip implements INodeType {
           },
         },
         default: '',
-        description: 'Choose from the list, or specify an ID using an expression. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+        description:
+          'Choose from the list, or specify an ID using an expression. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
         required: true,
       },
       {
@@ -365,21 +361,18 @@ export class Nvoip implements INodeType {
   methods = {
     loadOptions: {
       async getTemplates(this: ILoadOptionsFunctions) {
-        const credentials = (await this.getCredentials('nvoipOAuth2Api')) as unknown as OAuth2Creds;
-        const accessToken = credentials?.oauthTokenData?.access_token;
-        if (!accessToken) {
-          throw new NodeOperationError(this.getNode(), 'Missing OAuth2 access token');
-        }
-
-        const response = await this.helpers.request({
-          method: 'GET',
-          url: 'https://api.nvoip.com.br/v3/sms/lisTemplates',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
+        const response = await this.helpers.httpRequestWithAuthentication.call(
+          this,
+          'nvoipOAuth2Api',
+          {
+            method: 'GET',
+            url: 'https://api.nvoip.com.br/v3/sms/lisTemplates',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            json: true,
           },
-          json: true,
-        });
+        );
 
         const arr = Array.isArray(response) ? (response as Array<Record<string, any>>) : [];
         return arr.map((tpl) => {
@@ -395,21 +388,18 @@ export class Nvoip implements INodeType {
       },
 
       async getTemplatesWhatsApp(this: ILoadOptionsFunctions) {
-        const credentials = (await this.getCredentials('nvoipOAuth2Api')) as unknown as OAuth2Creds;
-        const accessToken = credentials?.oauthTokenData?.access_token;
-        if (!accessToken) {
-          throw new NodeOperationError(this.getNode(), 'Missing OAuth2 access token');
-        }
-
-        const response = await this.helpers.request({
-          method: 'GET',
-          url: 'https://api.nvoip.com.br/v3/wa/listTemplates',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
+        const response = await this.helpers.httpRequestWithAuthentication.call(
+          this,
+          'nvoipOAuth2Api',
+          {
+            method: 'GET',
+            url: 'https://api.nvoip.com.br/v3/wa/listTemplates',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            json: true,
           },
-          json: true,
-        });
+        );
 
         const templates: Array<{ name: string; value: string; description?: string }> = [];
         const list = Array.isArray(response) ? (response as Array<Record<string, any>>) : [];
@@ -432,262 +422,275 @@ export class Nvoip implements INodeType {
     },
   };
 
-	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const items = this.getInputData();
-		const returnData: INodeExecutionData[] = [];
+  async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+    const items = this.getInputData();
+    const returnData: INodeExecutionData[] = [];
 
-		const credentials = await this.getCredentials('nvoipOAuth2Api') as { oauthTokenData?: { access_token?: string } };
-		const accessToken = credentials?.oauthTokenData?.access_token;
-		if (!accessToken) {
-			throw new NodeOperationError(this.getNode(), 'Missing OAuth2 access token');
-		}
+    for (let i = 0; i < items.length; i++) {
+      try {
+        const resource = this.getNodeParameter('resource', i) as string;
+        const operation = this.getNodeParameter('operation', i) as string;
+        let response: IDataObject | undefined;
 
-		for (let i = 0; i < items.length; i++) {
-			try {
-				const resource = this.getNodeParameter('resource', i) as string;
-				const operation = this.getNodeParameter('operation', i) as string;
-				let response: IDataObject | undefined;
+        // ===== SMS simples =====
+        if (resource === 'sms' && operation === 'sendSms') {
+          const to = this.getNodeParameter('to', i) as string;
+          const message = this.getNodeParameter('message', i) as string;
 
-				// ===== SMS simples =====
-				if (resource === 'sms' && operation === 'sendSms') {
-					const to = this.getNodeParameter('to', i) as string;
-					const message = this.getNodeParameter('message', i) as string;
+          response = (await this.helpers.httpRequestWithAuthentication.call(
+            this,
+            'nvoipOAuth2Api',
+            {
+              method: 'POST',
+              url: 'https://api.nvoip.com.br/v3/sms',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: {
+                numberPhone: to,
+                message,
+              },
+              json: true,
+            },
+          )) as IDataObject;
 
-					response = await this.helpers.request({
-						method: 'POST',
-						url: 'https://api.nvoip.com.br/v3/sms',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${accessToken}`,
-						},
-						body: {
-							numberPhone: to,
-							message,
-						},
-						json: true,
-					}) as IDataObject;
+          // ===== SMS via template =====
+        } else if (resource === 'sms' && operation === 'sendTemplateSms') {
+          const to = this.getNodeParameter('to', i) as string;
+          const templateId = this.getNodeParameter('templateId', i) as string | number;
+          const variablesRaw = this.getNodeParameter('variables', i, {}) as {
+            variable?: Array<{ value: string }>;
+          };
+          const variables = (variablesRaw.variable ?? [])
+            .map((v) => v.value)
+            .filter((v) => v !== undefined) as string[];
 
-				// ===== SMS via template =====
-				} else if (resource === 'sms' && operation === 'sendTemplateSms') {
-					const to = this.getNodeParameter('to', i) as string;
-					const templateId = this.getNodeParameter('templateId', i) as string | number;
-					const variablesRaw = this.getNodeParameter('variables', i, {}) as {
-						variable?: Array<{ value: string }>;
-					};
-					const variables = (variablesRaw.variable ?? [])
-						.map((v) => v.value)
-						.filter((v) => v !== undefined) as string[];
+          if (!variables.length) {
+            throw new NodeOperationError(
+              this.getNode(),
+              `Attempt to send an SMS with template ID ${templateId}, but no variable was provided`,
+              { itemIndex: i },
+            );
+          }
 
-					if (!variables.length) {
-						throw new NodeOperationError(
-							this.getNode(),
-							`Attempt to send an SMS with template ID ${templateId}, but no variable was provided`,
-							{ itemIndex: i },
-						);
-					}
+          response = (await this.helpers.httpRequestWithAuthentication.call(
+            this,
+            'nvoipOAuth2Api',
+            {
+              method: 'POST',
+              url: 'https://api.nvoip.com.br/v3/sms/sendTemplate',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: {
+                phoneNumber: to,
+                templateId,
+                variables,
+              },
+              json: true,
+            },
+          )) as IDataObject;
 
-					response = await this.helpers.request({
-						method: 'POST',
-						url: 'https://api.nvoip.com.br/v3/sms/sendTemplate',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${accessToken}`,
-						},
-						body: {
-							phoneNumber: to,
-							templateId,
-							variables,
-						},
-						json: true,
-					}) as IDataObject;
+          // ===== WhatsApp =====
+        } else if (resource === 'whatsapp' && operation === 'sendWhatsapp') {
+          const to = this.getNodeParameter('toWhatsapp', i) as string;
+          const templateId = this.getNodeParameter('templateIdWhatsapp', i) as string;
+          const imageUrl = this.getNodeParameter('imageUrl', i, '') as string;
 
-				// ===== WhatsApp =====
-				} else if (resource === 'whatsapp' && operation === 'sendWhatsapp') {
-					const to = this.getNodeParameter('toWhatsapp', i) as string;
-					const templateId = this.getNodeParameter('templateIdWhatsapp', i) as string;
-					const imageUrl = this.getNodeParameter('imageUrl', i, '') as string;
+          const templateResponse = await this.helpers.httpRequestWithAuthentication.call(
+            this,
+            'nvoipOAuth2Api',
+            {
+              method: 'GET',
+              url: `https://api.nvoip.com.br/v3/wa/listTemplates`,
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              json: true,
+            },
+          );
 
-					// Busca os detalhes do template pelo ID
-					const templateResponse = await this.helpers.request({
-						method: 'GET',
-						url: `https://api.nvoip.com.br/v3/wa/listTemplates`,
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${accessToken}`,
-						},
-						json: true,
-					});
+          // Encontra o template selecionado
+          let selectedTemplate: any = null;
+          const list = Array.isArray(templateResponse)
+            ? (templateResponse as Array<Record<string, any>>)
+            : [];
+          for (const inst of list) {
+            if (Array.isArray(inst.data)) {
+              const found = inst.data.find((tpl: any) => String(tpl.id) === String(templateId));
+              if (found) {
+                selectedTemplate = { ...found, instance: inst.instance };
+                break;
+              }
+            }
+          }
 
-					// Encontra o template selecionado
-					let selectedTemplate: any = null;
-					const list = Array.isArray(templateResponse)
-						? (templateResponse as Array<Record<string, any>>)
-						: [];
-					for (const inst of list) {
-						if (Array.isArray(inst.data)) {
-							const found = inst.data.find((tpl: any) => String(tpl.id) === String(templateId));
-							if (found) {
-								selectedTemplate = { ...found, instance: inst.instance };
-								break;
-							}
-						}
-					}
+          if (!selectedTemplate) {
+            throw new NodeOperationError(this.getNode(), `Template with ID ${templateId} not found`, { itemIndex: i });
+          }
 
-					if (!selectedTemplate) {
-						throw new NodeOperationError(this.getNode(), `Template with ID ${templateId} not found`, { itemIndex: i });
-					}
+          const variablesRaw = this.getNodeParameter('variablesWhatsapp', i, {}) as {
+            variable?: Array<{ value: string }>;
+          };
+          const allValues = (variablesRaw.variable ?? [])
+            .map((v) => v.value)
+            .filter((v) => v !== undefined) as string[];
 
-					const variablesRaw = this.getNodeParameter('variablesWhatsapp', i, {}) as {
-						variable?: Array<{ value: string }>;
-					};
-					const allValues = (variablesRaw.variable ?? [])
-						.map((v) => v.value)
-						.filter((v) => v !== undefined) as string[];
+          if (!allValues.length) {
+            throw new NodeOperationError(
+              this.getNode(),
+              `Attempt to send WhatsApp template ID ${templateId}, but no variables were provided`,
+              { itemIndex: i },
+            );
+          }
 
-					if (!allValues.length) {
-						throw new NodeOperationError(
-							this.getNode(),
-							`Attempt to send WhatsApp template ID ${templateId}, but no variables were provided`,
-							{ itemIndex: i },
-						);
-					}
+          const requestBody: IDataObject = {
+            idTemplate: templateId,
+            destination: to,
+            instance: selectedTemplate.instance,
+            language: selectedTemplate.language,
+            bodyVariables: allValues,
+          };
 
-					const requestBody: IDataObject = {
-						idTemplate: templateId,
-						destination: to,
-						instance: selectedTemplate.instance,
-						language: selectedTemplate.language,
-						bodyVariables: allValues,
-					};
+          if (imageUrl) {
+            requestBody.url = imageUrl;
+          }
 
-					if (imageUrl) {
-						requestBody.url = imageUrl;
-					}
+          response = (await this.helpers.httpRequestWithAuthentication.call(
+            this,
+            'nvoipOAuth2Api',
+            {
+              method: 'POST',
+              url: 'https://api.nvoip.com.br/v3/wa/sendTemplates',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: requestBody,
+              json: true,
+            },
+          )) as IDataObject;
 
-					response = await this.helpers.request({
-						method: 'POST',
-						url: 'https://api.nvoip.com.br/v3/wa/sendTemplates',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${accessToken}`,
-						},
-						body: requestBody,
-						json: true,
-					}) as IDataObject;
+          // ===== Chamada simples =====
+        } else if (resource === 'call' && operation === 'makeCall') {
+          const caller = this.getNodeParameter('callerId', i) as string;
+          const called = this.getNodeParameter('destination', i) as string;
+          const transfer = this.getNodeParameter('transfer', i) as boolean;
 
-				// ===== Chamada simples =====
-				} else if (resource === 'call' && operation === 'makeCall') {
-					const caller = this.getNodeParameter('callerId', i) as string;
-					const called = this.getNodeParameter('destination', i) as string;
-					const transfer = this.getNodeParameter('transfer', i) as boolean;
+          const requestBody: IDataObject = {
+            caller,
+            called,
+            transfer,
+          };
 
-					const requestBody: IDataObject = {
-						caller,
-						called,
-						transfer,
-					};
+          response = (await this.helpers.httpRequestWithAuthentication.call(
+            this,
+            'nvoipOAuth2Api',
+            {
+              method: 'POST',
+              url: 'https://api.nvoip.com.br/v3/calls/',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: requestBody,
+              json: true,
+            },
+          )) as IDataObject;
 
-					response = await this.helpers.request({
-						method: 'POST',
-						url: 'https://api.nvoip.com.br/v3/calls/',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${accessToken}`,
-						},
-						body: requestBody,
-						json: true,
-					}) as IDataObject;
+          // ===== Torpedo de voz =====
+        } else if (resource === 'call' && operation === 'sendVoiceBlast') {
+          const caller = this.getNodeParameter('callerId', i) as string;
+          const destination = this.getNodeParameter('destination', i) as string;
+          const audio = this.getNodeParameter('audioContent', i) as string;
 
-				// ===== Torpedo de voz =====
-				} else if (resource === 'call' && operation === 'sendVoiceBlast') {
-					const caller = this.getNodeParameter('callerId', i) as string;
-					const destination = this.getNodeParameter('destination', i) as string;
-					const audio = this.getNodeParameter('audioContent', i) as string;
+          const requestBody = {
+            caller,
+            called: destination,
+            audios: [
+              {
+                audio,
+                positionAudio: 1,
+              },
+            ],
+            dtmfs: [],
+          };
 
-					const requestBody = {
-						caller,
-						called: destination,
-						audios: [
-							{
-								audio,
-								positionAudio: 1,
-							},
-						],
-						dtmfs: [],
-					};
+          response = (await this.helpers.httpRequestWithAuthentication.call(
+            this,
+            'nvoipOAuth2Api',
+            {
+              method: 'POST',
+              url: 'https://api.nvoip.com.br/v3/torpedo/voice',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: requestBody,
+              json: true,
+            },
+          )) as IDataObject;
 
-					response = await this.helpers.request({
-						method: 'POST',
-						url: 'https://api.nvoip.com.br/v3/torpedo/voice',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${accessToken}`,
-						},
-						body: requestBody,
-						json: true,
-					}) as IDataObject;
+        } else if (resource === 'call' && operation === 'sendVoiceBlastInteractive') {
+          const caller = this.getNodeParameter('callerId', i) as string;
+          const destination = this.getNodeParameter('destination', i) as string;
+          const audio1 = this.getNodeParameter('audio1', i) as string;
+          const audio2 = this.getNodeParameter('audio2', i) as string;
 
-				} else if (resource === 'call' && operation === 'sendVoiceBlastInteractive') {
-					const caller = this.getNodeParameter('callerId', i) as string;
-					const destination = this.getNodeParameter('destination', i) as string;
-					const audio1 = this.getNodeParameter('audio1', i) as string;
-					const audio2 = this.getNodeParameter('audio2', i) as string;
+          const requestBody = {
+            caller,
+            called: destination,
+            audios: [
+              {
+                audio: audio1,
+                positionAudio: 1,
+              },
+            ],
+            dtmfs: [
+              {
+                audio: audio2,
+                positionAudio: 2,
+                timedtmf: 4000,
+                timeout: 30,
+                min: 0,
+                max: 1,
+              },
+            ],
+          };
 
-					const requestBody = {
-						caller,
-						called: destination,
-						audios: [
-							{
-								audio: audio1,
-								positionAudio: 1,
-							},
-						],
-						dtmfs: [
-							{
-								audio: audio2,
-								positionAudio: 2,
-								timedtmf: 4000,
-								timeout: 30,
-								min: 0,
-								max: 1,
-							},
-						],
-					};
+          response = (await this.helpers.httpRequestWithAuthentication.call(
+            this,
+            'nvoipOAuth2Api',
+            {
+              method: 'POST',
+              url: 'https://api.nvoip.com.br/v3/torpedo/voice',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: requestBody,
+              json: true,
+            },
+          )) as IDataObject;
+        } else {
+          throw new NodeOperationError(this.getNode(), `Unsupported operation: ${resource}.${operation}`, { itemIndex: i });
+        }
 
-					response = await this.helpers.request({
-						method: 'POST',
-						url: 'https://api.nvoip.com.br/v3/torpedo/voice',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${accessToken}`,
-						},
-						body: requestBody,
-						json: true,
-					}) as IDataObject;
-				} else {
-					throw new NodeOperationError(this.getNode(), `Unsupported operation: ${resource}.${operation}`, { itemIndex: i });
-				}
+        returnData.push({
+          json: response,
+          pairedItem: { item: i },
+        });
+      } catch (error: unknown) {
+        if (this.continueOnFail()) {
+          returnData.push({
+            json: {
+              error: (error as any)?.message ?? 'Request failed',
+              itemIndex: i,
+            },
+            pairedItem: { item: i },
+          });
+          continue;
+        }
+        throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
+      }
+    }
 
-				// Vincula saída ao item de entrada correspondente
-				returnData.push({
-					json: response,
-					pairedItem: { item: i },
-				});
-			} catch (error: unknown) {
-				if (this.continueOnFail()) {
-					returnData.push({
-						json: {
-							error: (error as any)?.message ?? 'Request failed',
-							itemIndex: i,
-						},
-						pairedItem: { item: i },
-					});
-					continue;
-				}
-				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
-			}
-		}
-
-		return [returnData];
-	}
+    return [returnData];
+  }
 }
