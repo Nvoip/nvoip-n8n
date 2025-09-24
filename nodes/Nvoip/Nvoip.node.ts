@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Nvoip Plataforma de Comunicação Ltda.
 import {
   IExecuteFunctions,
   INodeExecutionData,
@@ -27,7 +29,7 @@ export class Nvoip implements INodeType {
     },
     credentials: [
       {
-        name: 'nvoipOAuth2Api',
+        name: 'nvoipAccessTokenApi',
         required: true,
       },
     ],
@@ -160,7 +162,7 @@ export class Nvoip implements INodeType {
         },
         default: '',
         required: true,
-        description: 'Number to receive the call (e.g., 5511999999999)',
+        description: 'Number to receive the call (ex: 5511999999999)',
       },
       {
         displayName: 'Audio Content (Text or Public MP3 URL)',
@@ -184,7 +186,7 @@ export class Nvoip implements INodeType {
           show: { resource: ['sms'], operation: ['sendSms', 'sendTemplateSms'] },
         },
         default: '',
-        description: 'Phone number with country code (e.g., 5511999999999)',
+        description: 'Phone number with country code (ex: 5511999999999)',
         required: true,
       },
       {
@@ -227,7 +229,7 @@ export class Nvoip implements INodeType {
           show: { resource: ['whatsapp'], operation: ['sendWhatsapp'] },
         },
         default: '',
-        description: 'Phone number with country code (e.g., 5511999999999)',
+        description: 'Phone number with country code (ex: 5511999999999)',
         required: true,
       },
       {
@@ -322,7 +324,7 @@ export class Nvoip implements INodeType {
           },
         },
         description:
-          'Text or audio containing the options (e.g., "Press 1 for yes, 2 for no")',
+          'Text or audio containing the options (ex: "Press 1 for yes, 2 for no")',
       },
       {
         displayName: 'Template Variables',
@@ -363,7 +365,7 @@ export class Nvoip implements INodeType {
       async getTemplates(this: ILoadOptionsFunctions) {
         const response = await this.helpers.httpRequestWithAuthentication.call(
           this,
-          'nvoipOAuth2Api',
+          'nvoipAccessTokenApi',
           {
             method: 'GET',
             url: 'https://api.nvoip.com.br/v3/sms/lisTemplates',
@@ -390,7 +392,7 @@ export class Nvoip implements INodeType {
       async getTemplatesWhatsApp(this: ILoadOptionsFunctions) {
         const response = await this.helpers.httpRequestWithAuthentication.call(
           this,
-          'nvoipOAuth2Api',
+          'nvoipAccessTokenApi',
           {
             method: 'GET',
             url: 'https://api.nvoip.com.br/v3/wa/listTemplates',
@@ -439,7 +441,7 @@ export class Nvoip implements INodeType {
 
           response = (await this.helpers.httpRequestWithAuthentication.call(
             this,
-            'nvoipOAuth2Api',
+            'nvoipAccessTokenApi',
             {
               method: 'POST',
               url: 'https://api.nvoip.com.br/v3/sms',
@@ -465,17 +467,9 @@ export class Nvoip implements INodeType {
             .map((v) => v.value)
             .filter((v) => v !== undefined) as string[];
 
-          if (!variables.length) {
-            throw new NodeOperationError(
-              this.getNode(),
-              `Attempt to send an SMS with template ID ${templateId}, but no variable was provided`,
-              { itemIndex: i },
-            );
-          }
-
           response = (await this.helpers.httpRequestWithAuthentication.call(
             this,
-            'nvoipOAuth2Api',
+            'nvoipAccessTokenApi',
             {
               method: 'POST',
               url: 'https://api.nvoip.com.br/v3/sms/sendTemplate',
@@ -499,7 +493,7 @@ export class Nvoip implements INodeType {
 
           const templateResponse = await this.helpers.httpRequestWithAuthentication.call(
             this,
-            'nvoipOAuth2Api',
+            'nvoipAccessTokenApi',
             {
               method: 'GET',
               url: `https://api.nvoip.com.br/v3/wa/listTemplates`,
@@ -558,7 +552,7 @@ export class Nvoip implements INodeType {
 
           response = (await this.helpers.httpRequestWithAuthentication.call(
             this,
-            'nvoipOAuth2Api',
+            'nvoipAccessTokenApi',
             {
               method: 'POST',
               url: 'https://api.nvoip.com.br/v3/wa/sendTemplates',
@@ -584,7 +578,7 @@ export class Nvoip implements INodeType {
 
           response = (await this.helpers.httpRequestWithAuthentication.call(
             this,
-            'nvoipOAuth2Api',
+            'nvoipAccessTokenApi',
             {
               method: 'POST',
               url: 'https://api.nvoip.com.br/v3/calls/',
@@ -616,7 +610,7 @@ export class Nvoip implements INodeType {
 
           response = (await this.helpers.httpRequestWithAuthentication.call(
             this,
-            'nvoipOAuth2Api',
+            'nvoipAccessTokenApi',
             {
               method: 'POST',
               url: 'https://api.nvoip.com.br/v3/torpedo/voice',
@@ -657,7 +651,7 @@ export class Nvoip implements INodeType {
 
           response = (await this.helpers.httpRequestWithAuthentication.call(
             this,
-            'nvoipOAuth2Api',
+            'nvoipAccessTokenApi',
             {
               method: 'POST',
               url: 'https://api.nvoip.com.br/v3/torpedo/voice',

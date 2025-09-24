@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Portions Copyright (c) 2022 n8n GmbH
+// Modifications Copyright (c) 2025 Nvoip Plataforma de Comunicação Ltda.
 # 📡 @nvoip/n8n-nodes-nvoip
 
 [![Node.js Version](https://img.shields.io/badge/Node.js-20+-green)](https://nodejs.org/)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Portions Copyright (c) 2022 n8n GmbH
+// Modifications Copyright (c) 2025 Nvoip Plataforma de Comunicação Ltda.
 # n8n-nodes-_node-name_
 
 This is an n8n community node. It lets you use _app/service name_ in your n8n workflows.
