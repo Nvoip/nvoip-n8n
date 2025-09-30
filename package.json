@@ -1,6 +1,6 @@
 {
   "name": "@nvoip/n8n-nodes-nvoip",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Criação de nodes para o n8n",
   "keywords": [
     "n8n-community-node-package"
@@ -33,7 +33,7 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-       "dist/credentials/nvoipAccessTokenApi.credentials.js"
+       "dist/credentials/NvoipAccessTokenApi.credentials.js"
     ],
     "nodes": [
       "dist/nodes/Nvoip/Nvoip.node.js"
