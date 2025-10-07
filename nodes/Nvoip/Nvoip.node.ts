@@ -23,7 +23,7 @@ export class Nvoip implements INodeType {
     },
     group: ['transform'],
     version: 1,
-    description: 'Node for sending SMS via Nvoip',
+    description: 'Make calls, send WhatsApp and SMS.',
     defaults: {
       name: 'Nvoip',
     },
@@ -389,38 +389,58 @@ export class Nvoip implements INodeType {
         });
       },
 
-      async getTemplatesWhatsApp(this: ILoadOptionsFunctions) {
-        const response = await this.helpers.httpRequestWithAuthentication.call(
-          this,
-          'nvoipAccessTokenApi',
-          {
-            method: 'GET',
-            url: 'https://api.nvoip.com.br/v3/wa/listTemplates',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          },
-        );
+			async getTemplatesWhatsApp(this: ILoadOptionsFunctions) {
+				const response = await this.helpers.httpRequestWithAuthentication.call(
+					this,
+					'nvoipAccessTokenApi',
+					{
+						method: 'GET',
+						url: 'https://api.nvoip.com.br/v3/wa/listTemplates',
+						headers: { 'Content-Type': 'application/json' },
+						json: true,
+					},
+				);
 
-        const templates: Array<{ name: string; value: string; description?: string }> = [];
-        const list = Array.isArray(response) ? (response as Array<Record<string, any>>) : [];
-        for (const inst of list) {
-          if (Array.isArray(inst.data)) {
-            for (const tpl of inst.data) {
-              const desc = Array.isArray(tpl.components)
-                ? tpl.components.map((c: any) => c?.text).filter(Boolean).join(' | ')
-                : undefined;
-              templates.push({
-                name: String(tpl.name ?? tpl.id ?? 'Template'),
-                value: String(tpl.id),
-                description: desc,
-              });
-            }
-          }
-        }
-        return templates;
-      },
+				const templates: Array<{ name: string; value: string; description?: string }> = [];
+				const list = Array.isArray(response) ? (response as Array<Record<string, any>>) : [];
+
+				for (const inst of list) {
+					if (!Array.isArray(inst.data)) continue;
+
+					for (const tpl of inst.data) {
+						const texts: string[] = [];
+
+						if (Array.isArray(tpl.components)) {
+							for (const c of tpl.components) {
+								if (typeof c?.text === 'string') texts.push(String(c.text));
+								if (typeof c?.example?.header_text === 'string') texts.push(String(c.example.header_text));
+								if (Array.isArray(c?.example?.body_text)) {
+									texts.push(...c.example.body_text.map((t: any) => String(t)));
+								}
+								if (Array.isArray(c?.buttons)) {
+									for (const b of c.buttons) {
+										if (typeof b?.text === 'string') texts.push(String(b.text));
+										if (typeof b?.url === 'string') texts.push(String(b.url));
+									}
+								}
+							}
+						}
+
+						const joined = texts.join(' | ');
+						const matches = joined.match(/{{\d+}}/g) ?? [];
+						const uniqueVars = Array.from(new Set(matches.map((v) => v.replace(/[^\d]/g, ''))));
+						const summary = joined ? joined.slice(0, 140) : '';
+
+						templates.push({
+							name: String(tpl.name ?? tpl.id ?? 'Template'),
+							value: String(tpl.id),
+							description: `Variáveis: ${uniqueVars.length}${summary ? ' - ' + summary : ''}`,
+						});
+					}
+				}
+
+				return templates;
+			},
     },
   };
 
