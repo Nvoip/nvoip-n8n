@@ -10,6 +10,17 @@ Este pacote fornece um node personalizado para o n8n, permitindo integrar os ser
 
 O projeto foi desenvolvido em TypeScript, com suporte a OAuth2 para autenticação segura e funcionalidades de comunicação multicanal.
 
+### Destinatários WhatsApp
+
+Na operação de envio com HSM, selecione `Phone`, `BSUID` ou `Parent BSUID`.
+Telefone mantém o contrato compatível `destination`; BSUID e parent BSUID usam
+o objeto `recipient` tipado. Informe o identificador opaco fornecido pela Meta,
+nunca `@username`, e não coloque BSUID em campos de telefone.
+
+O retorno inclui `user_id` e `wa_id` quando a Meta os fornecer. Templates de
+autenticação incompatíveis com BSUID retornam o código público estável
+`WHATSAPP_BSUID_AUTH_TEMPLATE_UNSUPPORTED`.
+
 ## Como usar o node
 
 Siga este passo a passo para configurar e usar o node `@nvoip/n8n-nodes-nvoip`:

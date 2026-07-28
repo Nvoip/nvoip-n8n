@@ -219,14 +219,30 @@ export class Nvoip implements INodeType {
 				required: true,
 			},
 			{
-				displayName: 'Destination Number',
+				displayName: 'Recipient Type',
+				name: 'recipientTypeWhatsapp',
+				type: 'options',
+				displayOptions: {
+					show: { resource: ['whatsapp'], operation: ['sendWhatsapp'] },
+				},
+				options: [
+					{ name: 'Phone', value: 'phone', description: 'Send to a phone number' },
+					{ name: 'BSUID', value: 'bsuid', description: 'Send to a business-scoped user ID' },
+					{ name: 'Parent BSUID', value: 'parent_bsuid', description: 'Send to a parent business-scoped user ID' },
+				],
+				default: 'phone',
+				required: true,
+			},
+			{
+				displayName: 'Recipient',
 				name: 'toWhatsapp',
 				type: 'string',
 				displayOptions: {
 					show: { resource: ['whatsapp'], operation: ['sendWhatsapp'] },
 				},
 				default: '',
-				description: 'Phone number with country code (ex: 5511999999999)',
+				placeholder: '5511999999999 or US.MASKED_BSUID_001',
+				description: 'Phone number or opaque BSUID selected by Recipient Type. @username is not accepted.',
 				required: true,
 			},
 			{
@@ -505,8 +521,34 @@ export class Nvoip implements INodeType {
 					// ===== WhatsApp =====
 				} else if (resource === 'whatsapp' && operation === 'sendWhatsapp') {
 					const to = this.getNodeParameter('toWhatsapp', i) as string;
+					const recipientType = this.getNodeParameter('recipientTypeWhatsapp', i) as
+						| 'phone'
+						| 'bsuid'
+						| 'parent_bsuid';
 					const templateId = this.getNodeParameter('templateIdWhatsapp', i) as string;
 					const imageUrl = this.getNodeParameter('imageUrl', i, '') as string;
+
+					if (to.startsWith('@')) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'@username is not a WhatsApp recipient; use a BSUID or parent BSUID',
+							{ itemIndex: i },
+						);
+					}
+					if (recipientType === 'phone' && !/^\+?[0-9]{8,20}$/.test(to)) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Phone recipients must contain only an optional leading + and 8 to 20 digits',
+							{ itemIndex: i },
+						);
+					}
+					if (recipientType !== 'phone' && (!/^\S+$/.test(to) || to.length > 256)) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'BSUID recipients must be opaque values without whitespace (maximum 256 characters)',
+							{ itemIndex: i },
+						);
+					}
 
 					function countPlaceholders(text?: string): number {
 						if (!text) return 0;
@@ -592,10 +634,14 @@ export class Nvoip implements INodeType {
 
 					const requestBody: IDataObject = {
 						idTemplate: templateId,
-						destination: to,
 						instance: selectedTemplate.instance,
 						language: selectedTemplate.language,
 					};
+					if (recipientType === 'phone') {
+						requestBody.destination = to;
+					} else {
+						requestBody.recipient = { type: recipientType, value: to };
+					}
 
 					if (requiredCount > 0) {
 						requestBody.bodyVariables = allValues;
