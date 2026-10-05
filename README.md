@@ -37,7 +37,7 @@ Arraste o node para o canvas de automação e clique nele para abrir as configur
 
 No campo **Authentication** do node, escolha **Client ID and Secret (Automatic Renewal)** (padrão nos nodes novos) e crie a credencial **Nvoip Client Credentials API**:
 
-- no painel da Nvoip, acesse **Desenvolvedor → Credenciais da API v3** e crie uma credencial do tipo `client_credentials`;
+- no painel da Nvoip, acesse **Integrações → N8N** e clique em **Gerar credencial do n8n** (ou, em **Desenvolvedor → Nvoip API v3 (OAuth2.0)**, crie uma credencial do tipo `client_credentials`);
 - copie o **Client ID** e o **Client Secret** (o segredo aparece uma única vez) para a credencial do n8n.
 
 O n8n pede o token sozinho na primeira execução e pede outro sempre que a API responder 401 porque o token venceu (ele vale 24 horas). Não é preciso colar token nem montar renovação no fluxo. Os detalhes estão em [Autenticação](#autenticação).
