@@ -35,7 +35,12 @@ Arraste o node para o canvas de automação e clique nele para abrir as configur
 
 3. Configure suas credenciais
 
-A credencial do node recebe um access token Bearer da v3. Emita-o pelo OAuth central no backend e preencha o campo Access Token. O node não emite nem renova o token automaticamente; configure a renovação no seu fluxo seguro.
+No campo **Authentication** do node, escolha **Client ID and Secret (Automatic Renewal)** (padrão nos nodes novos) e crie a credencial **Nvoip Client Credentials API**:
+
+- no painel da Nvoip, acesse **Integrações → N8N** e clique em **Gerar credencial do n8n** (ou, em **Desenvolvedor → Nvoip API v3 (OAuth2.0)**, crie uma credencial do tipo `client_credentials`);
+- copie o **Client ID** e o **Client Secret** (o segredo aparece uma única vez) para a credencial do n8n.
+
+O n8n pede o token sozinho na primeira execução e pede outro sempre que a API responder 401 porque o token venceu (ele vale 24 horas). Não é preciso colar token nem montar renovação no fluxo. Os detalhes estão em [Autenticação](#autenticação).
 
 4. Configure a ação desejada
 
@@ -87,10 +92,39 @@ O `@nvoip/n8n-nodes-nvoip` amplia o uso da Nvoip em automações no n8n, permiti
 
 A arquitetura modular facilita manutenção e abre espaço para evoluções futuras.
 
+## Autenticação
+
+O node aceita duas credenciais. Escolha qual usar no campo **Authentication**.
+
+| Opção | Credencial | Renovação do token |
+|-------|------------|--------------------|
+| **Client ID and Secret (Automatic Renewal)** — recomendada | `Nvoip Client Credentials API` | Automática. O n8n emite o token por `client_credentials` e emite outro quando a API responde 401. |
+| **Access Token (Manual)** | `Nvoip Access Token API` | Nenhuma. O token colado vence em 24 horas e o fluxo passa a falhar até você colar outro. |
+
+Como a credencial **Nvoip Client Credentials API** funciona:
+
+- o token é pedido em `POST https://api.nvoip.com.br/auth/oauth2/token`, com `Content-Type: application/x-www-form-urlencoded`, corpo `grant_type=client_credentials` e o Client ID e o Client Secret no cabeçalho `Authorization: Basic`;
+- não é preciso informar `scope`: as rotas usadas pelo node (SMS, templates de SMS e WhatsApp, envio de WhatsApp, ligações e torpedo de voz) aceitam o token da credencial e agem em nome do usuário dono dela no painel;
+- o token fica guardado, criptografado, na própria credencial do n8n e não aparece na tela;
+- se você trocar o Client ID, o token anterior deixa de ser usado e o n8n emite um novo na execução seguinte;
+- Client ID ou Client Secret errados geram o erro `Não foi possível obter o token da Nvoip (HTTP 401 invalid_client)`.
+
+### Workflows que já usam Access Token
+
+Nada muda para eles: nodes criados antes desta versão continuam na opção **Access Token (Manual)** e na mesma credencial. Para parar de colar token, abra o node, troque **Authentication** para **Client ID and Secret (Automatic Renewal)**, selecione ou crie a credencial **Nvoip Client Credentials API** e salve o workflow.
+
 ## Migração para a v3
 
-A URL base é `https://api.nvoip.com.br/v3`. Emita o token no backend em `https://api.nvoip.com.br/auth/oauth2/token`, com formulário `grant_type=client_credentials`, `client_id` e `client_secret`, e use `Authorization: Bearer`. O token do usuário e a napikey antigos não autenticam a v3. `client_credentials` pode não emitir refresh token; renove pela mesma emissão quando expirar. A chave com escopos depende do NN-5543 e não é apresentada como disponível aqui.
+A URL base é `https://api.nvoip.com.br/v3`. O token é emitido em `https://api.nvoip.com.br/auth/oauth2/token` com `grant_type=client_credentials`, o Client ID e o Client Secret, e enviado em `Authorization: Bearer`. Com a credencial **Nvoip Client Credentials API**, o node faz isso sozinho. O token do usuário e a napikey antigos não autenticam a v3. `client_credentials` não emite refresh token: a renovação é uma nova emissão, que o n8n faz quando o token vence. A chave com escopos depende do NN-5543 e não é apresentada como disponível aqui.
 
 [Guia de migração v2 → v3](https://github.com/Nvoip/nvoip-api-examples/blob/main/docs/migration-v2-v3.md).
 
 Para SMS, prefira o template `ACTIVE` da própria conta. Texto livre exige liberação explícita da política da v3; HTTP 403 não deve ser contornado com credencial legada.
+
+## Versões
+
+### 0.2.0
+
+- Nova credencial **Nvoip Client Credentials API** (Client ID e Client Secret), com emissão e renovação automáticas do token.
+- Campo **Authentication** no node. Nodes novos (versão 2 do node) usam a credencial nova por padrão; nodes existentes (versão 1) continuam com **Access Token (Manual)**.
+- Testes automatizados (`npm test`).

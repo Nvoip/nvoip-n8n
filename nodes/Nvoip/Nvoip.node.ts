@@ -13,6 +13,30 @@ import {
 	JsonObject,
 } from 'n8n-workflow';
 
+export const ACCESS_TOKEN_CREDENTIAL = 'nvoipAccessTokenApi';
+export const CLIENT_CREDENTIALS_CREDENTIAL = 'nvoipClientCredentialsApi';
+export const AUTH_MANUAL_TOKEN = 'manualToken';
+export const AUTH_CLIENT_CREDENTIALS = 'clientCredentials';
+
+const AUTHENTICATION_OPTIONS = [
+	{
+		name: 'Access Token (Manual)',
+		value: AUTH_MANUAL_TOKEN,
+		description: 'Bearer token pasted by hand. It expires after 24 hours and is not renewed by the node.',
+	},
+	{
+		name: 'Client ID and Secret (Automatic Renewal)',
+		value: AUTH_CLIENT_CREDENTIALS,
+		description: 'API v3 client_credentials credential. n8n requests a new token whenever it expires.',
+	},
+];
+
+export function credentialTypeFor(authentication: unknown): string {
+	return authentication === AUTH_CLIENT_CREDENTIALS
+		? CLIENT_CREDENTIALS_CREDENTIAL
+		: ACCESS_TOKEN_CREDENTIAL;
+}
+
 export class Nvoip implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Nvoip',
@@ -22,20 +46,55 @@ export class Nvoip implements INodeType {
 			dark: 'file:Logo_nvoip.svg',
 		},
 		group: ['transform'],
-		version: 1,
+		version: [1, 2],
 		description: 'Make calls, send WhatsApp and SMS.',
 		defaults: {
 			name: 'Nvoip',
 		},
 		credentials: [
 			{
-				name: 'nvoipAccessTokenApi',
+				name: ACCESS_TOKEN_CREDENTIAL,
 				required: true,
+				displayOptions: {
+					show: { authentication: [AUTH_MANUAL_TOKEN] },
+				},
+			},
+			{
+				name: CLIENT_CREDENTIALS_CREDENTIAL,
+				required: true,
+				displayOptions: {
+					show: { authentication: [AUTH_CLIENT_CREDENTIALS] },
+				},
 			},
 		],
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
 		properties: [
+			// Version 1 keeps the manual access token as default so existing workflows (saved without this
+			// parameter) keep using the credential they already have. New nodes (version 2) default to the
+			// Client ID/Secret credential, whose token n8n renews automatically.
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				noDataExpression: true,
+				options: AUTHENTICATION_OPTIONS,
+				default: AUTH_MANUAL_TOKEN,
+				displayOptions: {
+					show: { '@version': [1] },
+				},
+			},
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				noDataExpression: true,
+				options: AUTHENTICATION_OPTIONS,
+				default: AUTH_CLIENT_CREDENTIALS,
+				displayOptions: {
+					show: { '@version': [2] },
+				},
+			},
 			{
 				displayName: 'Resource',
 				name: 'resource',
@@ -377,7 +436,7 @@ export class Nvoip implements INodeType {
 			async getTemplates(this: ILoadOptionsFunctions) {
 				const response = await this.helpers.httpRequestWithAuthentication.call(
 					this,
-					'nvoipAccessTokenApi',
+					credentialTypeFor(this.getNodeParameter('authentication', AUTH_MANUAL_TOKEN)),
 					{
 						method: 'GET',
 						url: 'https://api.nvoip.com.br/v3/sms/lisTemplates',
@@ -404,7 +463,7 @@ export class Nvoip implements INodeType {
 			async getTemplatesWhatsApp(this: ILoadOptionsFunctions) {
 				const response = await this.helpers.httpRequestWithAuthentication.call(
 					this,
-					'nvoipAccessTokenApi',
+					credentialTypeFor(this.getNodeParameter('authentication', AUTH_MANUAL_TOKEN)),
 					{
 						method: 'GET',
 						url: 'https://api.nvoip.com.br/v3/wa/listTemplates',
@@ -465,6 +524,9 @@ export class Nvoip implements INodeType {
 			try {
 				const resource = this.getNodeParameter('resource', i) as string;
 				const operation = this.getNodeParameter('operation', i) as string;
+				const credentialType = credentialTypeFor(
+					this.getNodeParameter('authentication', i, AUTH_MANUAL_TOKEN),
+				);
 				let response: IDataObject | undefined;
 
 				// ===== SMS simples =====
@@ -474,7 +536,7 @@ export class Nvoip implements INodeType {
 
 					response = (await this.helpers.httpRequestWithAuthentication.call(
 						this,
-						'nvoipAccessTokenApi',
+						credentialType,
 						{
 							method: 'POST',
 							url: 'https://api.nvoip.com.br/v3/sms',
@@ -502,7 +564,7 @@ export class Nvoip implements INodeType {
 
 					response = (await this.helpers.httpRequestWithAuthentication.call(
 						this,
-						'nvoipAccessTokenApi',
+						credentialType,
 						{
 							method: 'POST',
 							url: 'https://api.nvoip.com.br/v3/sms/sendTemplate',
@@ -582,7 +644,7 @@ export class Nvoip implements INodeType {
 
 					const templateResponse = await this.helpers.httpRequestWithAuthentication.call(
 						this,
-						'nvoipAccessTokenApi',
+						credentialType,
 						{
 							method: 'GET',
 							url: `https://api.nvoip.com.br/v3/wa/listTemplates`,
@@ -657,7 +719,7 @@ export class Nvoip implements INodeType {
 
 					response = (await this.helpers.httpRequestWithAuthentication.call(
 						this,
-						'nvoipAccessTokenApi',
+						credentialType,
 						{
 							method: 'POST',
 							url: 'https://api.nvoip.com.br/v3/wa/sendTemplates',
@@ -683,7 +745,7 @@ export class Nvoip implements INodeType {
 
 					response = (await this.helpers.httpRequestWithAuthentication.call(
 						this,
-						'nvoipAccessTokenApi',
+						credentialType,
 						{
 							method: 'POST',
 							url: 'https://api.nvoip.com.br/v3/calls/',
@@ -715,7 +777,7 @@ export class Nvoip implements INodeType {
 
 					response = (await this.helpers.httpRequestWithAuthentication.call(
 						this,
-						'nvoipAccessTokenApi',
+						credentialType,
 						{
 							method: 'POST',
 							url: 'https://api.nvoip.com.br/v3/torpedo/voice',
@@ -755,7 +817,7 @@ export class Nvoip implements INodeType {
 
 					response = (await this.helpers.httpRequestWithAuthentication.call(
 						this,
-						'nvoipAccessTokenApi',
+						credentialType,
 						{
 							method: 'POST',
 							url: 'https://api.nvoip.com.br/v3/torpedo/voice',
